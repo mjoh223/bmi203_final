@@ -1,61 +1,78 @@
 import csv
+import numpy as np
+import pandas as pd
 
-positives = []
-with open('/Users/matt/OneDrive/UCSF/algorithms/final/rap1-lieb-positives.txt') as csv_file:
-    csv_reader = csv.reader(csv_file, delimiter=',')
-    for row in csv_reader:
-        positives.append(row)
+class NeuralNet(object):
+	def __init__(self):
+		# Generate random numbers
+		np.random.seed(10)
 
-positives = np.asarray(positives).flatten()
+		# Assign random weights to a 3 x 1 matrix,
+		self.synaptic_weights = 2 * np.random.random((2, 1)) - 1
 
-X=np.array(([0,0,1],[0,1,1],[1,0,1],[1,1,1]), dtype=float)
-y=np.array(([0],[1],[1],[0]), dtype=float)
+	# The Sigmoid function
+	def __sigmoid(self, x):
+		return 1 / (1 + np.exp(-x))
 
-# Define useful functions
+	# The derivative of the Sigmoid function.
+	# This is the gradient of the Sigmoid curve.
+	def __sigmoid_derivative(self, x):
+		return x * (1 - x)
 
-# Activation function
-def sigmoid(t):
-    return 1/(1+np.exp(-t))
+	# Train the neural network and adjust the weights each time.
+	def train(self, inputs, outputs, training_iterations):
+		for iteration in range(training_iterations):
 
-# Derivative of sigmoid
-def sigmoid_derivative(p):
-    return p * (1 - p)
+			# Pass the training set through the network.
+			output = self.learn(inputs)
 
-# Class definition
-class NeuralNetwork:
-    def __init__(self, x,y):
-        self.input = x
-        self.weights1= np.random.rand(self.input.shape[1],4) # considering we have 4 nodes in the hidden layer
-        self.weights2 = np.random.rand(4,1)
-        self.y = y
-        self.output = np.zeros(y.shape)
+			# Calculate the error
+			error = outputs - output
 
-    def feedforward(self):
-        self.layer1 = sigmoid(np.dot(self.input, self.weights1))
-        self.layer2 = sigmoid(np.dot(self.layer1, self.weights2))
-        return self.layer2
+			# Adjust the weights by a factor
+			factor = np.dot(inputs.T, error * self.__sigmoid_derivative(output))
+			self.synaptic_weights += factor
 
-    def backprop(self):
-        d_weights2 = np.dot(self.layer1.T, 2*(self.y -self.output)*sigmoid_derivative(self.output))
-        d_weights1 = np.dot(self.input.T, np.dot(2*(self.y -self.output)*sigmoid_derivative(self.output), self.weights2.T)*sigmoid_derivative(self.layer1))
+	# The neural network thinks.
+	def learn(self, inputs):
+		return self.__sigmoid(np.dot(inputs, self.synaptic_weights))
 
-        self.weights1 += d_weights1
-        self.weights2 += d_weights2
+if __name__ == "__main__":
 
-    def train(self, X, y):
-        self.output = self.feedforward()
-        self.backprop()
+	#Initialize
+	neural_network = NeuralNet()
 
+	# The training set.
+	positives = []
+	with open('/Users/matt/OneDrive/UCSF/algorithms/final/rap1-lieb-positives.txt') as csv_file:
+	    csv_reader = csv.reader(csv_file, delimiter=',')
+	    for row in csv_reader:
+	        positives.append(row)
 
-NN = NeuralNetwork(X,y)
-for i in range(1500): # trains the NN 1,000 times
-    if i % 100 ==0:
-        print ("for iteration # " + str(i) + "\n")
-        print ("Input : \n" + str(X))
-        print ("Actual Output: \n" + str(y))
-        print ("Predicted Output: \n" + str(NN.feedforward()))
-        NN.feedforward()
-        print ("Loss: \n" + str(np.mean(np.square(y - NN.feedforward())))) # mean sum squared loss
-        print ("\n")
+	positives = np.asarray(positives).flatten()
+	conversion_dictionary = {
+	"A": [0,0],
+	"T": [0,1],
+	"G": [1,0],
+	"C": [1,1]
+	}
+	seq_list = []
+	for seq in positives:
+		encoding_list = []
+		for nt in seq:
+			encoding = conversion_dictionary[nt]
+			encoding_list.append(encoding)
+		seq_list.append(encoding_list)
 
-    NN.train(X, y)
+	positives_encoded = pd.DataFrame(seq_list)
+	outputs_test = np.ones((137,1))
+	positives_encoded_array = np.asarray(seq_list)
+
+	inputs = np.array([[0, 1], [1, 0], [1, 0]])
+	outputs = np.array([[1, 0]]).T
+
+	# Train the neural network
+	neural_network.train(inputs, outputs, 10000)
+
+	# Test the neural network with a test example.
+	#print(neural_network.learn(np.array([1, 0, 1])))
