@@ -67,7 +67,7 @@ class NNet():
 		self.true_layer = true_vector
 		for i in range(0, iterations):
 			self.forward()
-			del_b1, del_b2, dJ_dweights1, dJ_dweights2 =s self.compute_grad()
+			del_b1, del_b2, dJ_dweights1, dJ_dweights2 = self.compute_grad()
 			dJ_dweights2 = dJ_dweights2 / input_vector.shape[0] + self.lam * self.weights2
 			del_b2 = del_b2 / input_vector.shape[0]
 			dJ_dweights1 = dJ_dweights1 / input_vector.shape[0] + self.lam * self.weights1
