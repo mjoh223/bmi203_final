@@ -1,111 +1,177 @@
 import csv
 import numpy as np
 import pandas as pd
+from Bio import SeqIO
+from ann_class import NNet
+from sklearn import metrics
+import matplotlib.pyplot as plt
 
-class NeuralNet(object):
-	def __init__(self):
-		# Generate random numbers
-		np.random.seed(10)
+####################### Plot Autoencoder########################################
+################################################################################
+autoencoder = NNet(8,3,8)
+X = np.identity(8)
+y = np.identity(8)
+X.shape
+autoencoder.train(X, y, 1000000)
+x_axis = np.asarray(range(0,8))
+##ground truth
+plt.plot(x_axis, X[0])
+plt.plot(x_axis, X[1])
+plt.plot(x_axis, X[2])
+plt.plot(x_axis, X[3])
+plt.plot(x_axis, X[4])
+plt.plot(x_axis, X[5])
+plt.plot(x_axis, X[6])
+plt.plot(x_axis, X[7])
+plt.title("Identity matrix (ground truth)")
 
-		# Assign random weights to a 3 x 1 matrix,
-		self.synaptic_weights = 2 * np.random.random((2, 1)) - 1
-
-	# The Sigmoid function
-	def __sigmoid(self, x):
-		return 1 / (1 + np.exp(-x))
-
-	# The derivative of the Sigmoid function.
-	# This is the gradient of the Sigmoid curve.
-	def __sigmoid_derivative(self, x):
-		return x * (1 - x)
-
-	# Train the neural network and adjust the weights each time.
-	def train(self, inputs, outputs, training_iterations):
-		for iteration in range(training_iterations):
-
-			# Pass the training set through the network.
-			output = self.learn(inputs)
-
-			# Calculate the error
-			error = outputs - output
-
-			# Adjust the weights by a factor
-			factor = np.dot(inputs.T, error * self.__sigmoid_derivative(output))
-			self.synaptic_weights += factor
-
-	# The neural network thinks.
-	def learn(self, inputs):
-		return self.__sigmoid(np.dot(inputs, self.synaptic_weights))
-
-########################################################################################
-########################################################################################
-def sigmoid(x):
-    return 1.0/(1+ np.exp(-x))
-def sigmoid_derivative(x):
-    return x * (1.0 - x)
-class NeuralNetwork:
-    def __init__(self, x, y):
-        self.input      = x
-        self.weights1   = np.random.rand(self.input.shape[1],10)
-        self.weights2   = np.random.rand(10,1)
-        self.y          = y
-        self.output     = np.zeros(self.y.shape)
-    def feedforward(self):
-        self.layer1 = sigmoid(np.dot(self.input, self.weights1))
-        self.output = sigmoid(np.dot(self.layer1, self.weights2))
-    def backprop(self):
-        # application of the chain rule to find derivative of the loss function with respect to weights2 and weights1
-        d_weights2 = np.dot(self.layer1.T, (2*(self.y - self.output) * sigmoid_derivative(self.output)))
-        d_weights1 = np.dot(self.input.T,  (np.dot(2*(self.y - self.output) * sigmoid_derivative(self.output), self.weights2.T) * sigmoid_derivative(self.layer1)))
-
-        # update the weights with the derivative (slope) of the loss function
-        self.weights1 += d_weights1 #multply by learning rate
-        self.weights2 += d_weights2 #multply by learning rate
-
-inputs = np.array([[0, 1, 0], [1, 0, 1]]) #row is the observations columns are the features
-outputs = np.array([[1, 0]]).T
-nn = NeuralNetwork(inputs, outputs)
-for i in range(150):
-    nn.feedforward()
-    nn.backprop()
-    print(nn.output)
+plt.plot(x_axis, autoencoder.predict(X)[0])
+plt.plot(x_axis, autoencoder.predict(X)[1])
+plt.plot(x_axis, autoencoder.predict(X)[2])
+plt.plot(x_axis, autoencoder.predict(X)[3])
+plt.plot(x_axis, autoencoder.predict(X)[4])
+plt.plot(x_axis, autoencoder.predict(X)[5])
+plt.plot(x_axis, autoencoder.predict(X)[6])
+plt.plot(x_axis, autoencoder.predict(X)[7])
+plt.title("training iterations = 1000000")
 
 
-if __name__ == "__main__":
-	# The training set.
-	positives = []
-	with open('/Users/matt/OneDrive/UCSF/algorithms/final/rap1-lieb-positives.txt') as csv_file:
-	    csv_reader = csv.reader(csv_file, delimiter=',')
-	    for row in csv_reader:
-	        positives.append(row)
+##########################Part 2################################################
+################################################################################
 
-	positives = np.asarray(positives).flatten()
-	conversion_dictionary = {
-	"A": [0,0],
-	"T": [0,1],
-	"G": [1,0],
-	"C": [1,1]
-	}
-	seq_list = []
-	for seq in positives:
-		encoding_list = []
-		for nt in seq:
-			encoding = conversion_dictionary[nt]
-			encoding_list.append(encoding)
-		seq_list.append(encoding_list)
+# The training set.
+test = []
+with open('/Users/matt/OneDrive/UCSF/algorithms/final/rap1-lieb-test.txt') as csv_file:
+    csv_reader = csv.reader(csv_file, delimiter=',')
+    for row in csv_reader:
+        test.append(row)
+test_set = np.asarray(test).flatten()
 
-	positives_encoded = pd.DataFrame(seq_list)
-	outputs_test = np.ones((137,1))
-	positives_encoded_array = np.asarray(seq_list)
+negatives = []
+with open('/Users/matt/OneDrive/UCSF/algorithms/final/yeast-upstream-1k-negative.fa', 'r') as handle:
+	for record in SeqIO.parse(handle, "fasta"):
+		negatives.append(str(record.seq))
+negatives = np.asarray(negatives).flatten()
+negatives_sample = np.random.choice(negatives, 137)
+negatives_sample2 = []
+for seq in negatives_sample:
+	n = int( np.random.randint(len(seq)-17, size=1) )
+	negatives_sample2.append(seq[n:n+17])
 
-	inputs = np.array([[0, 1, 0, 1], [1, 0, 1, 1]]) #row is the observations columns are the features
-	outputs = np.array([[1, 0]]).T
 
-	# Train the neural network
+positives = []
+with open('/Users/matt/OneDrive/UCSF/algorithms/final/rap1-lieb-positives.txt') as csv_file:
+    csv_reader = csv.reader(csv_file, delimiter=',')
+    for row in csv_reader:
+        positives.append(row)
 
-		#Initialize
-	neural_network = NeuralNet()
-	neural_network.train(inputs, outputs, 10000)
+positives = np.asarray(positives).flatten()
+#encoding
+conversion_dictionary = {
+"A": [0,0],
+"T": [0,1],
+"G": [1,0],
+"C": [1,1]
+}
+seq_list = []
+for seq in positives:
+	encoding_list = []
+	for nt in seq:
+		encoding = conversion_dictionary[nt]
+		encoding_list.append(encoding)
+	seq_list.append(encoding_list)
 
-	# Test the neural network with a test example.
-	#print(neural_network.learn(np.array([1, 0, 1])))
+seq_test_list = []
+for seq in test_set:
+	encoding_list = []
+	for nt in seq:
+		encoding = conversion_dictionary[nt]
+		encoding_list.append(encoding)
+	seq_test_list.append(encoding_list)
+
+seq_neg_list = []
+for seq in negatives_sample2:
+	encoding_list = []
+	for nt in seq:
+		encoding = conversion_dictionary[nt]
+		encoding_list.append(encoding)
+	seq_neg_list.append(encoding_list)
+
+from itertools import chain
+X_pos = [list(chain.from_iterable(x)) for x in seq_list]
+X_neg = [list(chain.from_iterable(x)) for x in seq_neg_list]
+test =  [list(chain.from_iterable(x)) for x in seq_test_list]
+
+X_pos = np.array(X_pos)
+X_neg = np.array(X_neg)
+X = np.concatenate((X_pos,X_neg),axis=0)
+
+y_pos = np.ones(137)
+y_neg = np.zeros(137)
+y = np.concatenate((y_pos, y_neg), axis =0)
+test = np.array(test)
+
+#train
+RapNet = NNet(34,200,274,0.001, 0.05)
+RapNet.train(X,y,100)
+
+#test
+RapNet = NNet(34,200,1,0.001, 0.05)
+prediction_list = []
+test[0]
+for t in test:
+	pred = RapNet.predict(t)
+	prediction_list.append(pred)
+len(test)
+
+
+##########################Part 3################################################
+################################################################################
+#Optimal hidden layer size
+auc_list = []
+for i in [100, 500, 1000, 5000, 10000, 50000, 100000]:
+	RapNet = NNet(34, i, 1)
+	RapNet.lam = 0.001
+	RapNet.alpha = 2
+	y_score = []
+	for t in X:
+		p = RapNet.predict(t)
+		y_score.append(p)
+	y_score = np.array(y_score)
+	fpr, tpr, thresh = metrics.roc_curve(y, y_score)
+	auc = metrics.auc(fpr, tpr)
+	auc_list.append([i, auc])
+plt.plot([x[0] for x in auc_list], [x[1] for x in auc_list])
+plt.title("AUC for hidden layer unit size")
+
+#optimal learing rate
+auc_list = []
+for i in [0.01, 0.1, 1, 2, 3, 4, 5, 6, 7, 8 , 9, 10]:
+	RapNet = NNet(34, 1000, 1)
+	RapNet.lam = 0.001
+	RapNet.alpha = i
+	y_score = []
+	for t in X:
+		p = RapNet.predict(t)
+		y_score.append(p)
+	y_score = np.array(y_score)
+	fpr, tpr, thresh = metrics.roc_curve(y, y_score)
+	auc = metrics.auc(fpr, tpr)
+	auc_list.append([i, auc])
+plt.plot([x[0] for x in auc_list], [x[1] for x in auc_list])
+plt.title("AUC for learning rate")
+
+#system performance
+RapNet = NNet(34, 100000, 1, 0.001, 0.05)
+RapNet.train(X, y, 10)
+test[0]
+RapNet.predict(test[0])
+y_score = []
+for i,t in enumerate(test):
+	p = RapNet.predict(t)
+	y_score.append([test_set[i], p])
+y_score = np.asarray(y_score)
+pd.DataFrame(y_score).to_csv("test.out")
+
+fpr, tpr, thresh = metrics.roc_curve(y, y_score)
+auc = metrics.auc(fpr, tpr)
